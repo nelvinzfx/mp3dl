@@ -1,11 +1,17 @@
-# mp3dl
+<p align="center">
+  <img src="assets/logo.svg" width="120" alt="mp3dl logo" />
+</p>
 
-[![Release](https://img.shields.io/github/v/release/nelvinzfx/mp3dl?style=flat&color=1DB954&label=release)](https://github.com/nelvinzfx/mp3dl/releases)
-[![APK Size](https://img.shields.io/badge/APK-1.4_MB-1DB954?style=flat)](https://github.com/nelvinzfx/mp3dl/releases)
-[![Android](https://img.shields.io/badge/Android-API_26%2B-1DB954?style=flat)](https://github.com/nelvinzfx/mp3dl/releases)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.0.20-7F52FF?style=flat)](https://kotlinlang.org)
-[![Compose](https://img.shields.io/badge/Compose-BOM_2024.09-4285F4?style=flat)](https://developer.android.com/jetpack/compose)
-[![License](https://img.shields.io/badge/license-none-1DB954?style=flat)](https://github.com/nelvinzfx/mp3dl)
+<h1 align="center">mp3dl</h1>
+
+<p align="center">
+  <a href="https://github.com/nelvinzfx/mp3dl/releases"><img src="https://img.shields.io/github/v/release/nelvinzfx/mp3dl?style=plastic&color=1DB954&label=release&logo=github&logoColor=white" alt="Release"></a>
+  <img src="https://img.shields.io/badge/APK-1.4_MB-1DB954?style=plastic&logo=android&logoColor=white" alt="APK Size">
+  <img src="https://img.shields.io/badge/Android-API_26%2B-1DB954?style=plastic&logo=android&logoColor=white" alt="Android">
+  <img src="https://img.shields.io/badge/Kotlin-2.0.20-7F52FF?style=plastic&logo=kotlin&logoColor=white" alt="Kotlin">
+  <img src="https://img.shields.io/badge/Compose-BOM_2024.09-4285F4?style=plastic&logo=jetpackcompose&logoColor=white" alt="Compose">
+  <img src="https://img.shields.io/badge/license-none-1DB954?style=plastic&logo=github&logoColor=white" alt="License">
+</p>
 
 Aplikasi Android ringan buat cari dan download lagu MP3. Dark mode doang, tampilan minimalis, ga ada iklan, ga ada yang ribet.
 
