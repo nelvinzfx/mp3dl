@@ -178,8 +178,9 @@ private fun Mp3DlApp(sharedText: String?) {
 
     // auto-search when launched via share intent
     LaunchedEffect(pendingShared) {
-        if (!pendingShared.isNullOrBlank()) {
-            query = pendingShared
+        val shared = pendingShared
+        if (!shared.isNullOrBlank()) {
+            query = shared
             pendingShared = null
             doSearch()
         }
