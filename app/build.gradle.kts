@@ -12,8 +12,8 @@ android {
         applicationId = "com.nelvinzfx.mp3dl"
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.3"
     }
 
     val keystoreFile = file("${rootProject.projectDir}/mp3dl.jks")

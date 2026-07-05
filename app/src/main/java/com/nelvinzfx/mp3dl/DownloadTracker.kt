@@ -36,4 +36,13 @@ object DownloadTracker {
     private fun sanitize(name: String): String {
         return name.replace(Regex("[\\\\/:*?\"<>|]"), "_").take(80)
     }
+
+    private const val KEY_SKIP_REDOWNLOAD_WARN = "skip_redownload_warn"
+
+    fun shouldSkipRedownloadWarn(ctx: Context): Boolean =
+        prefs(ctx).getBoolean(KEY_SKIP_REDOWNLOAD_WARN, false)
+
+    fun setSkipRedownloadWarn(ctx: Context, skip: Boolean) {
+        prefs(ctx).edit().putBoolean(KEY_SKIP_REDOWNLOAD_WARN, skip).apply()
+    }
 }

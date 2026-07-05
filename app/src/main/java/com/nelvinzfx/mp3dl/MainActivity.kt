@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -133,6 +134,7 @@ private fun Mp3DlApp(sharedText: String?) {
     val scope = rememberCoroutineScope()
     val keyboard = LocalSoftwareKeyboardController.current
     var showAbout by remember { mutableStateOf(false) }
+    var redownloadTarget by remember { mutableStateOf<SearchResult?>(null) }
 
     // persist downloaded IDs across app launches
     val downloadedIds = remember { mutableStateListOf<String>() }
@@ -217,6 +219,15 @@ private fun Mp3DlApp(sharedText: String?) {
                 return
             }
         }
+        // check if file already exists and user hasn't disabled warning
+        if (DownloadTracker.isFileExists(result.title) && !DownloadTracker.shouldSkipRedownloadWarn(context)) {
+            redownloadTarget = result
+            return
+        }
+        performDownload(result)
+    }
+
+    fun performDownload(result: SearchResult) {
         downloadingId = result.id
         scope.launch {
             try {
@@ -238,6 +249,18 @@ private fun Mp3DlApp(sharedText: String?) {
 
     if (showAbout) {
         AboutDialog(onDismiss = { showAbout = false })
+    }
+
+    redownloadTarget?.let { target ->
+        ReDownloadDialog(
+            title = target.title,
+            onConfirm = { skipWarn ->
+                DownloadTracker.setSkipRedownloadWarn(context, skipWarn)
+                performDownload(target)
+                redownloadTarget = null
+            },
+            onDismiss = { redownloadTarget = null }
+        )
     }
 
     Scaffold(
@@ -434,7 +457,7 @@ private fun AboutDialog(onDismiss: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Version 1.2",
+                    "Version 1.3",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF888888)
                 )
@@ -443,6 +466,60 @@ private fun AboutDialog(onDismiss: () -> Unit) {
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text("Close", color = Color(0xFF1DB954))
+            }
+        },
+        containerColor = Color(0xFF1E1E1E),
+        titleContentColor = Color(0xFF1DB954)
+    )
+}
+
+@Composable
+private fun ReDownloadDialog(
+    title: String,
+    onConfirm: (skipWarn: Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var dontShowAgain by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("File already exists", color = Color(0xFF1DB954), fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column {
+                Text(
+                    "\"$title\" is already in your Downloads folder.\nDo you want to download it again?",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFFEEEEEE)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = dontShowAgain,
+                        onCheckedChange = { dontShowAgain = it },
+                        colors = androidx.compose.material3.CheckboxDefaults.colors(
+                            checkedColor = Color(0xFF1DB954),
+                            uncheckedColor = Color(0xFF888888)
+                        )
+                    )
+                    Text(
+                        "Don't show this again",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFBBBBBB)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(dontShowAgain) }) {
+                Text("Download again", color = Color(0xFF1DB954))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color(0xFF888888))
             }
         },
         containerColor = Color(0xFF1E1E1E),
