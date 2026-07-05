@@ -210,23 +210,6 @@ private fun Mp3DlApp(sharedText: String?) {
         }
     }
 
-    fun doDownload(result: SearchResult) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED
-            ) {
-                permissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                return
-            }
-        }
-        // check if file already exists and user hasn't disabled warning
-        if (DownloadTracker.isFileExists(result.title) && !DownloadTracker.shouldSkipRedownloadWarn(context)) {
-            redownloadTarget = result
-            return
-        }
-        performDownload(result)
-    }
-
     fun performDownload(result: SearchResult) {
         downloadingId = result.id
         scope.launch {
@@ -245,6 +228,23 @@ private fun Mp3DlApp(sharedText: String?) {
             }
             downloadingId = null
         }
+    }
+
+    fun doDownload(result: SearchResult) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                permissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                return
+            }
+        }
+        // check if file already exists and user hasn't disabled warning
+        if (DownloadTracker.isFileExists(result.title) && !DownloadTracker.shouldSkipRedownloadWarn(context)) {
+            redownloadTarget = result
+            return
+        }
+        performDownload(result)
     }
 
     if (showAbout) {
