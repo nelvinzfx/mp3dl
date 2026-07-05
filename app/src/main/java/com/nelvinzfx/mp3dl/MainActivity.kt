@@ -434,7 +434,7 @@ private fun AboutDialog(onDismiss: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Version 1.0",
+                    "Version 1.2",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF888888)
                 )
