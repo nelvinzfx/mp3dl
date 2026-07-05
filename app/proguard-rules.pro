@@ -1,0 +1,2 @@
+# Coil
+-keep class coil.** { *; }
