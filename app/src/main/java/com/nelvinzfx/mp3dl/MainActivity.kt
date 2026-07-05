@@ -1,6 +1,7 @@
 package com.nelvinzfx.mp3dl
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -47,6 +48,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -69,16 +71,35 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+
+    private var sharedText by mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleSharedIntent(intent)
         setContent {
             Mp3DlTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    Mp3DlApp()
+                    Mp3DlApp(sharedText = sharedText)
                 }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleSharedIntent(intent)
+    }
+
+    private fun handleSharedIntent(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_SEND) {
+            val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+            if (text != null) {
+                sharedText = text
             }
         }
     }
@@ -103,7 +124,7 @@ private fun Mp3DlTheme(content: @Composable () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun Mp3DlApp() {
+private fun Mp3DlApp(sharedText: String?) {
     var query by remember { mutableStateOf("") }
     val results = remember { mutableStateListOf<SearchResult>() }
     var searching by remember { mutableStateOf(false) }
@@ -116,6 +137,9 @@ private fun Mp3DlApp() {
     // persist downloaded IDs across app launches
     val downloadedIds = remember { mutableStateListOf<String>() }
     downloadedIds.addAll(DownloadTracker.getDownloaded(context))
+
+    var pendingShared by remember { mutableStateOf<String?>(null) }
+    if (sharedText != null) pendingShared = sharedText
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -149,6 +173,15 @@ private fun Mp3DlApp() {
                 Toast.makeText(context, "Search failed", Toast.LENGTH_SHORT).show()
             }
             searching = false
+        }
+    }
+
+    // auto-search when launched via share intent
+    LaunchedEffect(pendingShared) {
+        if (!pendingShared.isNullOrBlank()) {
+            query = pendingShared
+            pendingShared = null
+            doSearch()
         }
     }
 

@@ -22,6 +22,7 @@ Aplikasi Android ringan buat cari dan download lagu MP3. Dark mode doang, tampil
 ## Fitur
 
 - Cari lagu pake keyword atau paste link YouTube/YT Music
+- Share langsung dari YouTube/YT Music ke app ini
 - Download MP3 langsung ke folder Downloads
 - Thumbnail lagu di tiap hasil pencarian
 - Lagu yang udah di-download ada tanda checkmark
