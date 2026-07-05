@@ -132,7 +132,19 @@ private fun Mp3DlApp() {
         scope.launch {
             try {
                 results.clear()
-                results.addAll(Mp3Api.search(query))
+                val vid = Mp3Api.extractVideoId(query)
+                if (vid != null) {
+                    // YouTube link: fetch metadata directly
+                    val meta = Mp3Api.fetchMetadata(vid)
+                    if (meta != null) {
+                        results.add(meta)
+                    } else {
+                        Toast.makeText(context, "Could not fetch video info", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    // Normal keyword search
+                    results.addAll(Mp3Api.search(query))
+                }
             } catch (e: Exception) {
                 Toast.makeText(context, "Search failed", Toast.LENGTH_SHORT).show()
             }
@@ -191,7 +203,7 @@ private fun Mp3DlApp() {
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                placeholder = { Text("Search songs...") },
+                placeholder = { Text("Search songs or paste YouTube link...") },
                 singleLine = true,
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { doSearch() }),
