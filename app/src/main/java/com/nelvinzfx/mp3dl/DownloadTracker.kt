@@ -2,6 +2,8 @@ package com.nelvinzfx.mp3dl
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Environment
+import java.io.File
 
 object DownloadTracker {
     private const val PREFS = "mp3dl_downloads"
@@ -17,5 +19,21 @@ object DownloadTracker {
         val current = getDownloaded(ctx).toMutableSet()
         current.add(id)
         prefs(ctx).edit().putStringSet(KEY_IDS, current).apply()
+    }
+
+    fun removeDownloaded(ctx: Context, id: String) {
+        val current = getDownloaded(ctx).toMutableSet()
+        current.remove(id)
+        prefs(ctx).edit().putStringSet(KEY_IDS, current).apply()
+    }
+
+    fun isFileExists(title: String): Boolean {
+        val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        val file = File(dir, "${sanitize(title)}.mp3")
+        return file.exists()
+    }
+
+    private fun sanitize(name: String): String {
+        return name.replace(Regex("[\\\\/:*?\"<>|]"), "_").take(80)
     }
 }

@@ -185,6 +185,15 @@ private fun Mp3DlApp(sharedText: String?) {
             } catch (e: Exception) {
                 Toast.makeText(context, "Search failed", Toast.LENGTH_SHORT).show()
             }
+            // sync downloaded state with actual file existence
+            val toRemove = downloadedIds.filter { id ->
+                val result = results.find { it.id == id }
+                result != null && !DownloadTracker.isFileExists(result.title)
+            }
+            toRemove.forEach { id ->
+                downloadedIds.remove(id)
+                DownloadTracker.removeDownloaded(context, id)
+            }
             searching = false
         }
     }
@@ -361,12 +370,14 @@ private fun ResultCard(
                     )
                 }
                 isDownloaded -> {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = "Downloaded",
-                        tint = Color(0xFF1DB954),
-                        modifier = Modifier.size(28.dp)
-                    )
+                    IconButton(onClick = onDownload) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = "Downloaded - tap to re-download",
+                            tint = Color(0xFF1DB954),
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
                 }
                 else -> {
                     IconButton(onClick = onDownload) {
