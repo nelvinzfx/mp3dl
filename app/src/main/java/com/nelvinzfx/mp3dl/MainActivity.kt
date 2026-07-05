@@ -25,8 +25,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,6 +42,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.darkColorScheme
@@ -56,6 +60,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -106,6 +111,11 @@ private fun Mp3DlApp() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val keyboard = LocalSoftwareKeyboardController.current
+    var showAbout by remember { mutableStateOf(false) }
+
+    // persist downloaded IDs across app launches
+    val downloadedIds = remember { mutableStateListOf<String>() }
+    downloadedIds.addAll(DownloadTracker.getDownloaded(context))
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -145,6 +155,8 @@ private fun Mp3DlApp() {
                 val url = Mp3Api.fetchDownloadUrl(result.id)
                 if (url.isNotEmpty()) {
                     Mp3Downloader.download(context, url, result.title)
+                    DownloadTracker.markDownloaded(context, result.id)
+                    downloadedIds.add(result.id)
                     Toast.makeText(context, "Downloading: ${result.title}", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(context, "Failed to get download link", Toast.LENGTH_SHORT).show()
@@ -156,10 +168,19 @@ private fun Mp3DlApp() {
         }
     }
 
+    if (showAbout) {
+        AboutDialog(onDismiss = { showAbout = false })
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("MP3 Downloader", color = Color(0xFF1DB954)) },
+                actions = {
+                    IconButton(onClick = { showAbout = true }) {
+                        Icon(Icons.Default.Info, contentDescription = "About", tint = Color(0xFF1DB954))
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF1E1E1E)
                 )
@@ -213,6 +234,7 @@ private fun Mp3DlApp() {
                         ResultCard(
                             result = result,
                             isDownloading = downloadingId == result.id,
+                            isDownloaded = downloadedIds.contains(result.id),
                             onDownload = { doDownload(result) }
                         )
                     }
@@ -226,11 +248,14 @@ private fun Mp3DlApp() {
 private fun ResultCard(
     result: SearchResult,
     isDownloading: Boolean,
+    isDownloaded: Boolean,
     onDownload: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDownloaded) Color(0xFF1A2820) else Color(0xFF1E1E1E)
+        ),
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
@@ -254,7 +279,7 @@ private fun ResultCard(
                 Text(
                     text = result.title,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFFEEEEEE),
+                    color = if (isDownloaded) Color(0xFFAAAAAA) else Color(0xFFEEEEEE),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -268,21 +293,89 @@ private fun ResultCard(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            if (isDownloading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    strokeWidth = 2.dp,
-                    color = Color(0xFF1DB954)
-                )
-            } else {
-                IconButton(onClick = onDownload) {
-                    Icon(
-                        Icons.Default.Download,
-                        contentDescription = "Download",
-                        tint = Color(0xFF1DB954)
+            when {
+                isDownloading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                        color = Color(0xFF1DB954)
                     )
+                }
+                isDownloaded -> {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = "Downloaded",
+                        tint = Color(0xFF1DB954),
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+                else -> {
+                    IconButton(onClick = onDownload) {
+                        Icon(
+                            Icons.Default.Download,
+                            contentDescription = "Download",
+                            tint = Color(0xFF1DB954)
+                        )
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun AboutDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("MP3 Downloader", color = Color(0xFF1DB954), fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column {
+                Text(
+                    "A lightweight music downloader for Android.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFFEEEEEE)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text("Built with", fontWeight = FontWeight.Bold, color = Color(0xFF1DB954))
+                Text(
+                    "Kotlin, Jetpack Compose, HttpURLConnection, Coil, Android DownloadManager",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFBBBBBB)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text("Purpose", fontWeight = FontWeight.Bold, color = Color(0xFF1DB954))
+                Text(
+                    "Search and download MP3 files with a clean, minimal dark interface. " +
+                    "No ads, no bloat — just find a song and download it.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFBBBBBB)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text("Made by", fontWeight = FontWeight.Bold, color = Color(0xFF1DB954))
+                Text(
+                    "nelvinzfx",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFBBBBBB)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Version 1.0",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF888888)
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close", color = Color(0xFF1DB954))
+            }
+        },
+        containerColor = Color(0xFF1E1E1E),
+        titleContentColor = Color(0xFF1DB954)
+    )
 }
