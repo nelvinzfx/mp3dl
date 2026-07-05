@@ -57,6 +57,12 @@ object Mp3Api {
         else String.format("%d:%02d", m, s)
     }
 
+    fun formatSize(bytes: Long): String {
+        val mb = bytes / 1024.0 / 1024.0
+        return if (mb >= 1.0) String.format("%.2f MB", mb)
+        else String.format("%.0f KB", bytes / 1024.0)
+    }
+
     suspend fun search(query: String): List<SearchResult> = withContext(Dispatchers.IO) {
         if (query.isBlank()) return@withContext emptyList()
 
@@ -161,5 +167,28 @@ object Mp3Api {
             }
         }
         ""
+    }
+
+    suspend fun fetchFileSize(downloadUrl: String): String = withContext(Dispatchers.IO) {
+        if (downloadUrl.isEmpty()) return@withContext ""
+        try {
+            val url = URL(downloadUrl)
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "HEAD"
+                setRequestProperty("User-Agent", UA)
+                connectTimeout = 10000
+                readTimeout = 10000
+            }
+            try {
+                if (conn.responseCode == 200) {
+                    val len = conn.getHeaderField("Content-Length")?.toLongOrNull() ?: 0L
+                    if (len > 0) formatSize(len) else ""
+                } else ""
+            } finally {
+                conn.disconnect()
+            }
+        } catch (_: Exception) {
+            ""
+        }
     }
 }

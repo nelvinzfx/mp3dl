@@ -162,6 +162,19 @@ private fun Mp3DlApp(sharedText: String?) {
                     val meta = Mp3Api.fetchMetadata(vid)
                     if (meta != null) {
                         results.add(meta)
+                        // async: fetch download URL + file size, update result
+                        scope.launch {
+                            val dlUrl = Mp3Api.fetchDownloadUrl(vid)
+                            if (dlUrl.isNotEmpty()) {
+                                val size = Mp3Api.fetchFileSize(dlUrl)
+                                if (size.isNotEmpty()) {
+                                    val idx = results.indexOfFirst { it.id == vid }
+                                    if (idx >= 0) {
+                                        results[idx] = results[idx].copy(size = size)
+                                    }
+                                }
+                            }
+                        }
                     } else {
                         Toast.makeText(context, "Could not fetch video info", Toast.LENGTH_SHORT).show()
                     }
