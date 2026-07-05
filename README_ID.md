@@ -15,7 +15,9 @@
 
 Aplikasi Android ringan buat cari dan download lagu MP3. Dark mode doang, tampilan minimalis, ga ada iklan, ga ada yang ribet.
 
-[Read in English](README.md)
+<p align="center">
+  <a href="README.md"><img src="https://img.shields.io/badge/Read_in-English-1DB954?style=plastic&logo=googletranslate&logoColor=white" alt="English"></a>
+</p>
 
 ## Fitur
 

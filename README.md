@@ -15,7 +15,9 @@
 
 A lightweight Android app to search and download MP3 files. Dark mode only, minimal UI, no ads, no bloat.
 
-[Baca dalam Bahasa Indonesia](README_ID.md)
+<p align="center">
+  <a href="README_ID.md"><img src="https://img.shields.io/badge/Baca_dalam-Bahasa_Indonesia-1DB954?style=plastic&logo=googletranslate&logoColor=white" alt="Bahasa Indonesia"></a>
+</p>
 
 ## Features
 
