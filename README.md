@@ -1,5 +1,12 @@
 # mp3dl
 
+[![Release](https://img.shields.io/github/v/release/nelvinzfx/mp3dl?style=flat&color=1DB954&label=release)](https://github.com/nelvinzfx/mp3dl/releases)
+[![APK Size](https://img.shields.io/badge/APK-1.4_MB-1DB954?style=flat)](https://github.com/nelvinzfx/mp3dl/releases)
+[![Android](https://img.shields.io/badge/Android-API_26%2B-1DB954?style=flat)](https://github.com/nelvinzfx/mp3dl/releases)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.0.20-7F52FF?style=flat)](https://kotlinlang.org)
+[![Compose](https://img.shields.io/badge/Compose-BOM_2024.09-4285F4?style=flat)](https://developer.android.com/jetpack/compose)
+[![License](https://img.shields.io/badge/license-none-1DB954?style=flat)](https://github.com/nelvinzfx/mp3dl)
+
 A lightweight Android app to search and download MP3 files. Dark mode only, minimal UI, no ads, no bloat.
 
 [Baca dalam Bahasa Indonesia](README_ID.md)
