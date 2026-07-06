@@ -26,6 +26,7 @@ Aplikasi Android ringan buat cari dan download lagu MP3. Dark mode doang, tampil
 - Download MP3 langsung ke folder Downloads
 - Thumbnail lagu di tiap hasil pencarian
 - Lagu yang udah di-download ada tanda checkmark
+- Download manager: lihat dan hapus file yang udah di-download
 - Dialog About berisi info aplikasi
 - Dark mode doang, accent warna hijau
 - APK cuma 1.4 MB

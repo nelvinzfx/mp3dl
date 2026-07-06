@@ -26,7 +26,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
@@ -34,6 +36,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -70,6 +73,16 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+data class DownloadedFile(
+    val id: String,
+    val title: String,
+    val sizeBytes: Long,
+    val date: Long
+)
 
 class MainActivity : ComponentActivity() {
 
@@ -123,6 +136,11 @@ private fun Mp3DlTheme(content: @Composable () -> Unit) {
     )
 }
 
+private fun formatDate(timestamp: Long): String {
+    val sdf = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+    return sdf.format(Date(timestamp))
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun Mp3DlApp(sharedText: String?) {
@@ -135,6 +153,9 @@ private fun Mp3DlApp(sharedText: String?) {
     val keyboard = LocalSoftwareKeyboardController.current
     var showAbout by remember { mutableStateOf(false) }
     var redownloadTarget by remember { mutableStateOf<SearchResult?>(null) }
+    var showDownloads by remember { mutableStateOf(false) }
+    val downloadList = remember { mutableStateListOf<DownloadedFile>() }
+    var deleteTarget by remember { mutableStateOf<DownloadedFile?>(null) }
 
     // persist downloaded IDs across app launches
     val downloadedIds = remember { mutableStateListOf<String>() }
@@ -217,7 +238,7 @@ private fun Mp3DlApp(sharedText: String?) {
                 val url = Mp3Api.fetchDownloadUrl(result.id)
                 if (url.isNotEmpty()) {
                     Mp3Downloader.download(context, url, result.title)
-                    DownloadTracker.markDownloaded(context, result.id)
+                    DownloadTracker.markDownloaded(context, result.id, result.title)
                     downloadedIds.add(result.id)
                     Toast.makeText(context, "Downloading: ${result.title}", Toast.LENGTH_SHORT).show()
                 } else {
@@ -247,6 +268,42 @@ private fun Mp3DlApp(sharedText: String?) {
         performDownload(result)
     }
 
+    fun refreshDownloads() {
+        downloadList.clear()
+        val history = DownloadTracker.getHistory(context)
+        history.forEach { (id, title) ->
+            val file = DownloadTracker.getFileInfo(title)
+            if (file == null) {
+                // file was deleted outside app, clean up tracker
+                DownloadTracker.removeDownloaded(context, id)
+                downloadedIds.remove(id)
+            } else {
+                downloadList.add(DownloadedFile(id, title, file.length(), file.lastModified()))
+            }
+        }
+        downloadList.sortByDescending { it.date }
+    }
+
+    LaunchedEffect(showDownloads) {
+        if (showDownloads) refreshDownloads()
+    }
+
+    fun performDelete(entry: DownloadedFile) {
+        DownloadTracker.deleteFile(entry.title)
+        DownloadTracker.removeDownloaded(context, entry.id)
+        downloadedIds.remove(entry.id)
+        downloadList.remove(entry)
+        Toast.makeText(context, "Deleted: ${entry.title}", Toast.LENGTH_SHORT).show()
+    }
+
+    fun doDelete(entry: DownloadedFile) {
+        if (!DownloadTracker.shouldSkipDeleteWarn(context)) {
+            deleteTarget = entry
+            return
+        }
+        performDelete(entry)
+    }
+
     if (showAbout) {
         AboutDialog(onDismiss = { showAbout = false })
     }
@@ -263,13 +320,37 @@ private fun Mp3DlApp(sharedText: String?) {
         )
     }
 
+    deleteTarget?.let { target ->
+        DeleteDialog(
+            title = target.title,
+            onConfirm = { skipWarn ->
+                DownloadTracker.setSkipDeleteWarn(context, skipWarn)
+                performDelete(target)
+                deleteTarget = null
+            },
+            onDismiss = { deleteTarget = null }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("MP3 Downloader", color = Color(0xFF1DB954)) },
+                title = { Text(if (showDownloads) "Downloads" else "MP3 Downloader", color = Color(0xFF1DB954)) },
+                navigationIcon = {
+                    if (showDownloads) {
+                        IconButton(onClick = { showDownloads = false }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color(0xFF1DB954))
+                        }
+                    }
+                },
                 actions = {
+                    if (!showDownloads) {
+                        IconButton(onClick = { showDownloads = true }) {
+                            Icon(Icons.Filled.Download, contentDescription = "Downloads", tint = Color(0xFF1DB954))
+                        }
+                    }
                     IconButton(onClick = { showAbout = true }) {
-                        Icon(Icons.Default.Info, contentDescription = "About", tint = Color(0xFF1DB954))
+                        Icon(Icons.Filled.Info, contentDescription = "About", tint = Color(0xFF1DB954))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -279,55 +360,79 @@ private fun Mp3DlApp(sharedText: String?) {
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                placeholder = { Text("Search songs or paste YouTube link...") },
-                singleLine = true,
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { doSearch() }),
-                trailingIcon = {
-                    if (searching) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    } else {
-                        IconButton(onClick = { doSearch() }) {
-                            Icon(Icons.Default.Search, contentDescription = "Search")
+            if (showDownloads) {
+                if (downloadList.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No downloads yet", color = Color(0xFF888888))
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(downloadList, key = { it.id }) { entry ->
+                            DownloadCard(
+                                entry = entry,
+                                onDelete = { doDelete(entry) }
+                            )
                         }
                     }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF1DB954),
-                    unfocusedBorderColor = Color(0xFF444444),
-                )
-            )
-
-            if (results.isEmpty() && !searching) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Search for songs to download", color = Color(0xFF888888))
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(results, key = { it.id }) { result ->
-                        ResultCard(
-                            result = result,
-                            isDownloading = downloadingId == result.id,
-                            isDownloaded = downloadedIds.contains(result.id),
-                            onDownload = { doDownload(result) }
-                        )
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    placeholder = { Text("Search songs or paste YouTube link...") },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { doSearch() }),
+                    trailingIcon = {
+                        if (searching) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        } else {
+                            IconButton(onClick = { doSearch() }) {
+                                Icon(Icons.Default.Search, contentDescription = "Search")
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF1DB954),
+                        unfocusedBorderColor = Color(0xFF444444),
+                    )
+                )
+
+                if (results.isEmpty() && !searching) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Search for songs to download", color = Color(0xFF888888))
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(results, key = { it.id }) { result ->
+                            ResultCard(
+                                result = result,
+                                isDownloading = downloadingId == result.id,
+                                isDownloaded = downloadedIds.contains(result.id),
+                                onDownload = { doDownload(result) }
+                            )
+                        }
                     }
                 }
             }
@@ -417,6 +522,53 @@ private fun ResultCard(
 }
 
 @Composable
+private fun DownloadCard(
+    entry: DownloadedFile,
+    onDelete: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF1E1E1E)
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = entry.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFFEEEEEE),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "${Mp3Api.formatSize(entry.sizeBytes)} | ${formatDate(entry.date)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF888888)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            IconButton(onClick = onDelete) {
+                Icon(
+                    Icons.Filled.Delete,
+                    contentDescription = "Delete",
+                    tint = Color(0xFF888888)
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun AboutDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -457,7 +609,7 @@ private fun AboutDialog(onDismiss: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Version 1.3",
+                    "Version 1.4",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF888888)
                 )
@@ -499,7 +651,7 @@ private fun ReDownloadDialog(
                     Checkbox(
                         checked = dontShowAgain,
                         onCheckedChange = { dontShowAgain = it },
-                        colors = androidx.compose.material3.CheckboxDefaults.colors(
+                        colors = CheckboxDefaults.colors(
                             checkedColor = Color(0xFF1DB954),
                             uncheckedColor = Color(0xFF888888)
                         )
@@ -515,6 +667,60 @@ private fun ReDownloadDialog(
         confirmButton = {
             TextButton(onClick = { onConfirm(dontShowAgain) }) {
                 Text("Download again", color = Color(0xFF1DB954))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color(0xFF888888))
+            }
+        },
+        containerColor = Color(0xFF1E1E1E),
+        titleContentColor = Color(0xFF1DB954)
+    )
+}
+
+@Composable
+private fun DeleteDialog(
+    title: String,
+    onConfirm: (skipWarn: Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var dontShowAgain by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Delete file?", color = Color(0xFF1DB954), fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column {
+                Text(
+                    "\"$title\" will be permanently deleted from your Downloads folder.\nThis cannot be undone.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFFEEEEEE)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = dontShowAgain,
+                        onCheckedChange = { dontShowAgain = it },
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = Color(0xFF1DB954),
+                            uncheckedColor = Color(0xFF888888)
+                        )
+                    )
+                    Text(
+                        "Don't show this again",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFBBBBBB)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(dontShowAgain) }) {
+                Text("Delete", color = Color(0xFFFF4444))
             }
         },
         dismissButton = {

@@ -26,6 +26,7 @@ A lightweight Android app to search and download MP3 files. Dark mode only, mini
 - Download MP3 directly to your Downloads folder
 - Album thumbnail on each result
 - Downloaded songs get a checkmark indicator
+- Download manager: view and delete downloaded files
 - About dialog with app info
 - Dark mode only, green accent
 - 1.4 MB APK
